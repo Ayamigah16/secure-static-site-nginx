@@ -148,7 +148,7 @@ update_duckdns() {
     local ip=$3
     local response
     
-    log_info "Updating DuckDNS record: $domain.duckdns.org → $ip"
+    log_info "Updating DuckDNS record: ${domain}.duckdns.org → $ip"
     
     response=$(curl -s "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip")
     
@@ -156,8 +156,21 @@ update_duckdns() {
         log_success "DuckDNS updated successfully"
         return 0
     elif [[ "$response" == "KO" ]]; then
-        error_exit "DuckDNS update failed. Check your domain and token."
+        log_error "DuckDNS API returned 'KO' - Invalid domain or token"
+        log_error "Domain: $domain"
+        log_error "Token: ${token:0:10}... (first 10 chars)"
+        log_error "IP: $ip"
+        log_error ""
+        log_error "Please verify:"
+        log_error "1. Your DuckDNS domain is correct (without .duckdns.org)"
+        log_error "2. Your DuckDNS token is valid (get it from https://www.duckdns.org/)"
+        log_error "3. Check your .env file or GitHub secrets"
+        error_exit "DuckDNS update failed"
     else
+        log_error "Unexpected response from DuckDNS: $response"
+        error_exit "DuckDNS update failed with unexpected response"
+    fi
+}
         error_exit "Unexpected response from DuckDNS: $response"
     fi
 }
