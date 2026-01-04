@@ -149,7 +149,21 @@ update_duckdns() {
     local response=""
     local curl_exit_code=0
     
+    # Validate parameters
+    if [[ -z "$domain" ]]; then
+        error_exit "Domain parameter is empty"
+    fi
+    if [[ -z "$token" ]]; then
+        error_exit "Token parameter is empty"
+    fi
+    if [[ -z "$ip" ]]; then
+        error_exit "IP parameter is empty"
+    fi
+    
+    # Debug: Show what we're sending (mask token for security)
     log_info "Updating DuckDNS record: ${domain}.duckdns.org → $ip"
+    log_info "Domain length: ${#domain}, Token length: ${#token}, IP: $ip"
+    log_info "URL: https://www.duckdns.org/update?domains=$domain&token=${token:0:10}...&ip=$ip"
     
     # Attempt curl with error handling
     response=$(curl -s -w '\n%{http_code}' "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip" 2>&1) || curl_exit_code=$?
@@ -157,7 +171,13 @@ update_duckdns() {
     # Check if curl command failed
     if [[ $curl_exit_code -ne 0 ]]; then
         log_error "Curl command failed with exit code: $curl_exit_code"
-        log_error "This usually indicates a network connectivity issue"
+        case $curl_exit_code in
+            3) log_error "Exit code 3: URL malformed - check domain, token, or IP contains invalid characters" ;;
+            6) log_error "Exit code 6: Could not resolve host" ;;
+            7) log_error "Exit code 7: Failed to connect to host" ;;
+            28) log_error "Exit code 28: Operation timeout" ;;
+            *) log_error "Unknown curl error" ;;
+        esac
         error_exit "Failed to connect to DuckDNS API"
     fi
     
@@ -165,8 +185,6 @@ update_duckdns() {
     local http_code=$(echo "$response" | tail -n1)
     response=$(echo "$response" | sed '$d')
     
-    log_info "HTTP Status: $http_code"
-    log_info "Response: $response"
     log_info "HTTP Status: $http_code"
     log_info "Response: $response"
     
