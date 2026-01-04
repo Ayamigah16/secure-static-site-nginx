@@ -146,11 +146,11 @@ update_duckdns() {
     local domain=$1
     local token=$2
     local ip=$3
-    local response
+    local response=""
     
     log_info "Updating DuckDNS record: ${domain}.duckdns.org → $ip"
     
-    response=$(curl -s "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip")
+    response=$(curl -s "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip" || echo "ERROR")
     
     if [[ "$response" == "OK" ]]; then
         log_success "DuckDNS updated successfully"
@@ -169,9 +169,6 @@ update_duckdns() {
     else
         log_error "Unexpected response from DuckDNS: $response"
         error_exit "DuckDNS update failed with unexpected response"
-    fi
-}
-        error_exit "Unexpected response from DuckDNS: $response"
     fi
 }
 
