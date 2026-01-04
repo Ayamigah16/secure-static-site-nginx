@@ -29,9 +29,21 @@ variable "root_volume_size" {
 }
 
 variable "ssh_public_key_path" {
-  description = "Path to SSH public key file"
+  description = "Path to SSH public key file (only used if create_key_pair is true)"
   type        = string
   default     = "~/.ssh/id_rsa.pub"
+}
+
+variable "create_key_pair" {
+  description = "Whether to create a new key pair or use existing one"
+  type        = bool
+  default     = true
+}
+
+variable "existing_key_pair_name" {
+  description = "Name of existing AWS key pair (only used if create_key_pair is false)"
+  type        = string
+  default     = ""
 }
 
 variable "ssh_allowed_cidr" {

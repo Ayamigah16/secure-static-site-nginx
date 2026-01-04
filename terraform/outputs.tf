@@ -25,7 +25,12 @@ output "security_group_id" {
 
 output "ssh_connection_string" {
   description = "SSH connection command"
-  value       = "ssh -i ~/.ssh/${aws_key_pair.deployer.key_name} ${var.deploy_user}@${var.use_elastic_ip ? aws_eip.web_server[0].public_ip : aws_instance.web_server.public_ip}"
+  value       = "ssh -i ~/.ssh/${local.key_pair_name} ${var.deploy_user}@${var.use_elastic_ip ? aws_eip.web_server[0].public_ip : aws_instance.web_server.public_ip}"
+}
+
+output "key_pair_name" {
+  description = "Name of the SSH key pair being used"
+  value       = local.key_pair_name
 }
 
 output "elastic_ip" {

@@ -29,10 +29,16 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# Create SSH key pair
+# Create SSH key pair (conditional)
 resource "aws_key_pair" "deployer" {
+  count      = var.create_key_pair ? 1 : 0
   key_name   = "${var.project_name}-deployer-key"
   public_key = file(var.ssh_public_key_path)
+}
+
+# Use existing or created key pair
+locals {
+  key_pair_name = var.create_key_pair ? aws_key_pair.deployer[0].key_name : var.existing_key_pair_name
 }
 
 # Security Group
@@ -88,7 +94,7 @@ resource "aws_security_group" "web_server" {
 resource "aws_instance" "web_server" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
-  key_name               = aws_key_pair.deployer.key_name
+  key_name               = local.key_pair_name
   vpc_security_group_ids = [aws_security_group.web_server.id]
   subnet_id              = var.subnet_id
 
