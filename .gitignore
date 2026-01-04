@@ -48,4 +48,12 @@ yarn.lock
 # Build outputs
 dist/
 build/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+terraform/crash.log
 out/

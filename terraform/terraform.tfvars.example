@@ -1,0 +1,24 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Settings
+project_name = "secure-static-site"
+environment  = "prod"
+
+# EC2 Instance Configuration
+instance_type     = "t3.micro"     # Free tier eligible
+root_volume_size  = 20             # GB
+
+# SSH Configuration
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+ssh_allowed_cidr    = ["0.0.0.0/0"] # Change to your IP for better security: ["YOUR_IP/32"]
+
+# Networking (leave empty to use default VPC/subnet)
+vpc_id    = ""
+subnet_id = ""
+
+# Elastic IP
+use_elastic_ip = true  # Set to true for persistent IP address
+
+# Deployment User
+deploy_user = "ubuntu"

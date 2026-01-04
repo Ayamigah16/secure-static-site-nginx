@@ -17,10 +17,56 @@ Production-ready deployment automation scripts for hosting a static website with
 
 ## 📋 Prerequisites
 
-- Ubuntu 20.04 LTS or newer server
-- Domain name (or free DuckDNS account)
-- SSH access to your server
-- Basic knowledge of Linux commands
+- **Option A: Manual Setup**
+  - Ubuntu 20.04 LTS or newer server
+  - SSH access to your server
+  
+- **Option B: Terraform (Recommended)**
+  - AWS account with EC2 access
+  - Terraform installed (>= 1.0)
+  - AWS CLI configured
+  
+- **For Both**:
+  - Domain name (or free DuckDNS account)
+  - Basic knowledge of Linux commands
+
+---
+
+## 🏗️ Infrastructure Setup
+
+### Option A: Terraform (Recommended)
+
+Automated EC2 instance provisioning with Infrastructure as Code:
+
+```bash
+# Initialize Terraform
+./terraform-helper.sh init
+
+# Edit configuration
+nano terraform/terraform.tfvars
+
+# Review plan
+./terraform-helper.sh plan
+
+# Create infrastructure
+./terraform-helper.sh apply
+
+# Connect to instance
+./terraform-helper.sh connect
+```
+
+See [terraform/README.md](terraform/README.md) for detailed documentation.
+
+**Benefits:**
+- ✅ Reproducible infrastructure
+- ✅ Automated security group configuration
+- ✅ Elastic IP for persistent address
+- ✅ Version controlled infrastructure
+- ✅ Easy to destroy and recreate
+
+### Option B: Manual Server Setup
+
+If you already have a server or prefer manual setup, skip to [Quick Start](#-quick-start).
 
 ---
 
