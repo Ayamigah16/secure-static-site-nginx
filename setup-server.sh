@@ -104,16 +104,33 @@ install_certbot() {
 configure_firewall() {
     log_info "Configuring UFW firewall..."
     
+    # Check if UFW is installed
+    if ! command -v ufw &> /dev/null; then
+        log_warning "UFW not installed, skipping firewall configuration"
+        return 0
+    fi
+    
     if ! sudo ufw status | grep -q "Status: active"; then
         log_info "Enabling UFW and setting up rules..."
-        sudo ufw --force allow OpenSSH || error_exit "Failed to allow OpenSSH"
-        sudo ufw --force allow 'Nginx Full' || error_exit "Failed to allow Nginx Full"
-        sudo ufw --force enable || error_exit "Failed to enable UFW"
+        
+        # Allow SSH (port 22)
+        sudo ufw allow 22/tcp || error_exit "Failed to allow SSH port 22"
+        
+        # Allow HTTP (port 80)
+        sudo ufw allow 80/tcp || error_exit "Failed to allow HTTP port 80"
+        
+        # Allow HTTPS (port 443)
+        sudo ufw allow 443/tcp || error_exit "Failed to allow HTTPS port 443"
+        
+        # Enable firewall
+        sudo ufw enable || error_exit "Failed to enable UFW"
+        
         log_success "UFW firewall configured and enabled"
     else
         log_warning "UFW already active, updating rules..."
-        sudo ufw allow OpenSSH
-        sudo ufw allow 'Nginx Full'
+        sudo ufw allow 22/tcp
+        sudo ufw allow 80/tcp
+        sudo ufw allow 443/tcp
         log_success "UFW rules updated"
     fi
     
