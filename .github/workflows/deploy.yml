@@ -85,21 +85,22 @@ jobs:
           DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
           LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
         run: |
-          # Create .env file on server if it doesn't exist
-          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST /bin/bash << ENDSSH
-            set -e
-            if [ ! -f $DEPLOY_PATH/.env ]; then
-              cat > $DEPLOY_PATH/.env << 'ENVEOF'
-DUCKDNS_DOMAIN="$DUCKDNS_DOMAIN"
-DUCKDNS_TOKEN="$DUCKDNS_TOKEN"
-LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
-SITE_SOURCE_DIR="$DEPLOY_PATH/site"
-ENVEOF
-              chmod 600 $DEPLOY_PATH/.env
-              echo "✅ Environment file created"
-            else
-              echo "ℹ️  Environment file already exists"
-            fi
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "bash -s" << 'ENDSSH'
+          set -e
+          DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
+          
+          if [ ! -f $DEPLOY_PATH/.env ]; then
+            cat > $DEPLOY_PATH/.env << 'ENVEOF'
+          DUCKDNS_DOMAIN="${{ secrets.DUCKDNS_DOMAIN }}"
+          DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
+          LETSENCRYPT_EMAIL="${{ secrets.LETSENCRYPT_EMAIL }}"
+          SITE_SOURCE_DIR="$DEPLOY_PATH/site"
+          ENVEOF
+            chmod 600 $DEPLOY_PATH/.env
+            echo "✅ Environment file created"
+          else
+            echo "ℹ️  Environment file already exists"
+          fi
           ENDSSH
       
       - name: Run deployment script
@@ -107,24 +108,21 @@ ENVEOF
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST /bin/bash << 'ENDSSH'
-            set -e
-            DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
-            cd $DEPLOY_PATH
-            
-            # Verify script exists and show debug info
-            if [ ! -f deploy-site.sh ]; then
-              echo "❌ deploy-site.sh not found!"
-              echo "Current directory: $(pwd)"
-              echo "Files present:"
-              ls -la
-              exit 1
-            fi
-            
-            # Run deployment
-            ./deploy-site.sh
-            
-            echo "✅ Deployment completed successfully"
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "bash -s" << 'ENDSSH'
+          set -e
+          DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
+          cd $DEPLOY_PATH
+          
+          if [ ! -f deploy-site.sh ]; then
+            echo "❌ deploy-site.sh not found!"
+            echo "Current directory: $(pwd)"
+            echo "Files present:"
+            ls -la
+            exit 1
+          fi
+          
+          ./deploy-site.sh
+          echo "✅ Deployment completed successfully"
           ENDSSH
       
       - name: Verify deployment
