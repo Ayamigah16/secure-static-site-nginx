@@ -147,10 +147,28 @@ update_duckdns() {
     local token=$2
     local ip=$3
     local response=""
+    local curl_exit_code=0
     
     log_info "Updating DuckDNS record: ${domain}.duckdns.org → $ip"
     
-    response=$(curl -s "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip" || echo "ERROR")
+    # Attempt curl with error handling
+    response=$(curl -s -w '\n%{http_code}' "https://www.duckdns.org/update?domains=$domain&token=$token&ip=$ip" 2>&1) || curl_exit_code=$?
+    
+    # Check if curl command failed
+    if [[ $curl_exit_code -ne 0 ]]; then
+        log_error "Curl command failed with exit code: $curl_exit_code"
+        log_error "This usually indicates a network connectivity issue"
+        error_exit "Failed to connect to DuckDNS API"
+    fi
+    
+    # Extract HTTP status code and response body
+    local http_code=$(echo "$response" | tail -n1)
+    response=$(echo "$response" | sed '$d')
+    
+    log_info "HTTP Status: $http_code"
+    log_info "Response: $response"
+    log_info "HTTP Status: $http_code"
+    log_info "Response: $response"
     
     if [[ "$response" == "OK" ]]; then
         log_success "DuckDNS updated successfully"
