@@ -30,7 +30,7 @@ output "ssh_connection_string" {
 
 output "key_pair_name" {
   description = "Name of the SSH key pair being used"
-  value       = local.key_pair_name
+  value       = aws_key_pair.deployer.key_name
 }
 
 output "elastic_ip" {
@@ -45,10 +45,10 @@ output "ami_id" {
 
 output "private_key_path" {
   description = "Path to private SSH key file"
-  value       = var.create_key_pair && var.generate_ssh_key ? local_file.private_key[0].filename : "Using existing key"
+  value       = var.generate_ssh_key ? local_file.private_key[0].filename : "Using existing key at ${var.ssh_public_key_path}"
 }
 
 output "public_key_path" {
   description = "Path to public SSH key file"
-  value       = var.create_key_pair && var.generate_ssh_key ? local_file.public_key[0].filename : "Using existing key"
+  value       = var.generate_ssh_key ? local_file.public_key[0].filename : "Using existing key at ${var.ssh_public_key_path}"
 }

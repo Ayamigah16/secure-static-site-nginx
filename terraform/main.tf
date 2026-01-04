@@ -39,14 +39,14 @@ data "aws_ami" "ubuntu" {
 
 # Generate SSH key pair (optional)
 resource "tls_private_key" "ssh" {
-  count     = var.create_key_pair && var.generate_ssh_key ? 1 : 0
+  count     = var.generate_ssh_key ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
 # Save generated private key locally
 resource "local_file" "private_key" {
-  count           = var.create_key_pair && var.generate_ssh_key ? 1 : 0
+  count           = var.generate_ssh_key ? 1 : 0
   content         = tls_private_key.ssh[0].private_key_openssh
   filename        = "${var.ssh_key_output_path}/${var.project_name}-key.pem"
   file_permission = "0600"
@@ -54,22 +54,20 @@ resource "local_file" "private_key" {
 
 # Save generated public key locally
 resource "local_file" "public_key" {
-  count           = var.create_key_pair && var.generate_ssh_key ? 1 : 0
+  count           = var.generate_ssh_key ? 1 : 0
   content         = tls_private_key.ssh[0].public_key_openssh
   filename        = "${var.ssh_key_output_path}/${var.project_name}-key.pub"
   file_permission = "0644"
 }
 
-# Create SSH key pair in AWS (conditional)
+# Create SSH key pair in AWS
 resource "aws_key_pair" "deployer" {
-  count      = var.create_key_pair ? 1 : 0
   key_name   = "${var.project_name}-deployer-key"
   public_key = var.generate_ssh_key ? tls_private_key.ssh[0].public_key_openssh : file(var.ssh_public_key_path)
 }
 
-# Use existing or created key pair
+# Key pair configuration
 locals {
-  key_pair_name = var.create_key_pair ? aws_key_pair.deployer[0].key_name : var.existing_key_pair_name
   private_key_path = var.generate_ssh_key ? "${var.ssh_key_output_path}/${var.project_name}-key.pem" : "~/.ssh/id_rsa"
 }
 
@@ -126,7 +124,7 @@ resource "aws_security_group" "web_server" {
 resource "aws_instance" "web_server" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
-  key_name               = local.key_pair_name
+  key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.web_server.id]
   subnet_id              = var.subnet_id
 

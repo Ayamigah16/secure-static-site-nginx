@@ -10,19 +10,13 @@ instance_type     = "t3.micro"     # Free tier eligible
 root_volume_size  = 20             # GB
 
 # SSH Configuration
-# Option 1: Let Terraform generate SSH keys for you (saves to ./ssh-keys/)
-create_key_pair  = true
-generate_ssh_key = true
+# Option 1: Let Terraform generate SSH keys for you (RECOMMENDED)
+generate_ssh_key    = true
 ssh_key_output_path = "./ssh-keys"
 
 # Option 2: Upload your existing public key
-# create_key_pair     = true
 # generate_ssh_key    = false
 # ssh_public_key_path = "~/.ssh/id_rsa.pub"
-
-# Option 3: Use existing AWS key pair
-# create_key_pair        = false
-# existing_key_pair_name = "my-existing-key"
 
 ssh_allowed_cidr = ["0.0.0.0/0"] # Change to your IP for better security: ["YOUR_IP/32"]
 
