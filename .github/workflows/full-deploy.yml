@@ -49,7 +49,14 @@ jobs:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
-          ssCreate deployment directory
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo '✅ SSH connection successful'"
+      
+      - name: Copy repository to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          # Create deployment directory
           ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH"
           
           # Sync entire repository
@@ -64,23 +71,22 @@ jobs:
           
           # Make scripts executable
           ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "cd $DEPLOY_PATH && chmod +x *.sh && ls -la *.sh"
-          rsync -avz --delete \
-            --exclude '.git' \
-            --exclude 'logs' \
-            --exclude '.env' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
-            ./ \
-            $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
           
           echo "✅ Repository synced to server"
       
       - name: Create environment file
-        env:"bash -s" << 'ENDSSH'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DUCKDNS_DOMAIN: ${{ secrets.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "bash -s" << 'ENDSSH'
           set -e
           DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
           cd $DEPLOY_PATH
           
-          # Always update .env file to ensure correct values
           cat > .env << ENVEOF
           DUCKDNS_DOMAIN="${{ secrets.DUCKDNS_DOMAIN }}"
           DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
@@ -90,14 +96,7 @@ jobs:
           ENVEOF
           
           chmod 600 .env
-        DUCKDNS_DOMAIN="$DUCKDNS_DOMAIN"
-          DUCKDNS_TOKEN="$DUCKDNS_TOKEN"
-          LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
-          SITE_SOURCE_DIR="$DEPLOY_PATH/site"
-          EOF
-            
-            chmod 600 .env
-            echo "✅ Environment file created"
+          echo "✅ Environment file created"
           ENDSSH
       
       - name: Build deployment flags
@@ -118,7 +117,9 @@ jobs:
       - name: Run full deployment
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}"bash -s" << 'ENDSSH'
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "bash -s" << 'ENDSSH'
           set -e
           DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
           cd $DEPLOY_PATH
@@ -136,9 +137,6 @@ jobs:
           ./full_deploy.sh ${{ steps.flags.outputs.flags }}
           
           echo "✅ Full deployment completed successfully"
-            
-            # Run full deployment with flags
-            ./full_deploy.sh $FLAGS
           ENDSSH
       
       - name: Cleanup
@@ -147,7 +145,19 @@ jobs:
           rm -f ~/.ssh/deploy_key
       
       - name: Deployment Summary
-        ifif [ -n "$DOMAIN" ]; then
+        if: success()
+        env:
+          DOMAIN: ${{ secrets.DUCKDNS_DOMAIN }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Full Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Server configured"
+          echo "✅ DNS updated"
+          echo "✅ Website deployed"
+          echo "✅ SSL certificate configured"
+          echo ""
+          if [ -n "$DOMAIN" ]; then
             echo "🌐 Visit: https://$DOMAIN.duckdns.org"
           else
             echo "🌐 Visit: http://${{ secrets.SSH_HOST }}"
@@ -160,17 +170,5 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "❌ Deployment Failed!"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Please check the logs above for details
-        env:
-          DOMAIN: ${{ secrets.DUCKDNS_DOMAIN }}
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🚀 Full Deployment Successful!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ Server configured"
-          echo "✅ DNS updated"
-          echo "✅ Website deployed"
-          echo "✅ SSL certificate configured"
-          echo ""
-          echo "🌐 Visit: https://$DOMAIN.duckdns.org"
+          echo "Please check the logs above for details"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
