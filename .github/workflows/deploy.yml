@@ -90,11 +90,11 @@ jobs:
           DEPLOY_PATH=/home/ubuntu/secure-static-site-nginx
           
           if [ ! -f $DEPLOY_PATH/.env ]; then
-            cat > $DEPLOY_PATH/.env << 'ENVEOF'
+            cat > $DEPLOY_PATH/.env << ENVEOF
           DUCKDNS_DOMAIN="${{ secrets.DUCKDNS_DOMAIN }}"
           DUCKDNS_TOKEN="${{ secrets.DUCKDNS_TOKEN }}"
           LETSENCRYPT_EMAIL="${{ secrets.LETSENCRYPT_EMAIL }}"
-          SITE_SOURCE_DIR="$DEPLOY_PATH/site"
+          SITE_SOURCE_DIR="/home/ubuntu/secure-static-site-nginx/site"
           ENVEOF
             chmod 600 $DEPLOY_PATH/.env
             echo "✅ Environment file created"
