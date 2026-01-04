@@ -1,202 +1,603 @@
-# Static Website with Nginx - Learning Guide
+# Secure Static Site with Nginx
 
-## 📚 Project Overview
-This project teaches you how to deploy a static website using Nginx, configure DNS, and secure it with SSL certificates. You'll learn practical DevOps and system administration skills.
-
----
-
-## 🎯 Learning Objectives
-
-By completing this project, you will understand:
-- **DNS**: Domain registration and A records
-- **Linux**: Server management and command-line operations
-- **Webserver**: Nginx configuration and deployment
-- **SSL/TLS**: Certificate generation and HTTPS configuration
-- **DevOps**: SCP file transfers, remote server management
+Production-ready deployment automation scripts for hosting a static website with Nginx, automatic DNS configuration, and Let's Encrypt SSL certificates.
 
 ---
 
-## 📋 Project Tasks & Progress
+## 🚀 Features
 
-### Phase 1: Domain & Server Setup
-
-#### Task 1: Buy a Domain Name ✓
-**Concepts**: DNS, Domain Registrars
-- **What you'll learn**: How domain names work, registrars, domain configuration
-- **Actions**:
-  - Choose a registrar (Namecheap, GoDaddy, Route53, Cloudflare, etc.)
-  - Buy a domain (e.g., `example.com`)
-  - Note: Keep registrar credentials safe
-- **Status**: Not Started
-- **Tips**: 
-  - Cheaper domains: `.tech`, `.xyz`, `.site` (instead of `.com`)
-  - Some registrars offer free DNS management
+- **Automated Server Setup** - Install and configure Nginx with one command
+- **DNS Management** - Automatic DuckDNS updates with validation
+- **Site Deployment** - Rsync-based deployment with backup and rollback
+- **SSL/TLS Automation** - Let's Encrypt certificate management
+- **Full Orchestration** - Complete deployment pipeline with selective execution
+- **Production-Ready** - Error handling, logging, validation, and safety checks
 
 ---
 
-#### Task 2: Spin Up a Ubuntu Server ✓
-**Concepts**: Cloud Infrastructure, Linux Servers, EC2 (AWS), Droplets (DigitalOcean)
-- **What you'll learn**: Cloud provider setup, server provisioning, security groups
-- **Providers to consider**:
-  - AWS EC2 (free tier available)
-  - DigitalOcean (simple, cost-effective)
-  - Linode, Vultr, or others
-- **Server Requirements**:
-  - OS: Ubuntu 20.04 LTS or newer
-  - Size: t2.micro (AWS) or 512MB RAM minimum
-  - Networking: Open ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
-- **Status**: Not Started
-- **Tips**:
-  - Create a security group allowing SSH, HTTP, HTTPS
-  - Save your .pem key file securely
-  - Note the server's public IP address
+## 📋 Prerequisites
+
+- Ubuntu 20.04 LTS or newer server
+- Domain name (or free DuckDNS account)
+- SSH access to your server
+- Basic knowledge of Linux commands
 
 ---
 
-### Phase 2: Server Configuration
+## 🛠️ Quick Start
 
-#### Task 3: SSH into Server & Install Nginx ✓
-**Concepts**: SSH, Linux Package Managers, Nginx
-- **What you'll learn**: Remote server access, package installation, Linux commands
-- **Commands to execute**:
-  ```bash
-  # Connect to server
-  ssh -i /path/to/key.pem ubuntu@<SERVER_IP>
-  
-  # Update system packages
-  sudo apt update
-  sudo apt upgrade -y
-  
-  # Install Nginx
-  sudo apt install nginx -y
-  
-  # Start and enable Nginx
-  sudo systemctl start nginx
-  sudo systemctl enable nginx
-  
-  # Verify installation
-  sudo systemctl status nginx
-  ```
-- **Status**: Not Started
-- **Key Concepts**:
-  - `-i` flag specifies the private key
-  - `sudo` executes commands as root
-  - `systemctl` manages services
+### 1. Initial Setup
 
----
+Clone this repository and configure your environment:
 
-#### Task 4: Download HTML Website Files ✓
-**Concepts**: HTML, File Downloads, Web Assets
-- **What you'll learn**: Website structure, static file types
-- **Options**:
-  - Use a sample HTML template
-  - Create a simple HTML file
-  - Download from websites like HTML5UP, Bootstrap, etc.
-- **Example**: Create a simple index.html:
-  ```html
-  <!DOCTYPE html>
-  <html>
-  <head>
+```bash
+# Copy the example configuration
+cp .env.example .env
+
+# Edit .env with your values
+nano .env
+```
+
+Required configuration in `.env`:
+```bash
+DUCKDNS_DOMAIN="your-domain"        # Without .duckdns.org
+DUCKDNS_TOKEN="your-token"          # From https://www.duckdns.org/
+LETSENCRYPT_EMAIL="you@email.com"   # For SSL certificates
+SITE_SOURCE_DIR="$HOME/site"        # Your website files location
+```
+
+### 2. Prepare Your Website
+
+Create your website files in the source directory:
+
+```bash
+mkdir -p $HOME/site
+cat > $HOME/site/index.html << 'EOF'
+<!DOCTYPE html>
+<html>
+<head>
     <title>My Website</title>
-  </head>
-  <body>
+</head>
+<body>
     <h1>Welcome to My Website</h1>
-    <p>This site is running on Nginx!</p>
-  </body>
-  </html>
-  ```
-- **Status**: Not Started
-- **Tips**:
-  - Nginx serves files from `/var/www/html/` by default
-  - Include CSS, JS, images for a complete learning experience
+    <p>This site is running on Nginx with SSL!</p>
+</body>
+</html>
+EOF
+```
+
+### 3. Run Full Deployment
+
+Execute the complete deployment pipeline:
+
+```bash
+./full_deploy.sh
+```
+
+That's it! Your website will be live with HTTPS.
 
 ---
 
-#### Task 5: Use SCP to Copy Files to Nginx Directory ✓
-**Concepts**: SCP, Remote File Transfer, Linux Permissions
-- **What you'll learn**: Secure file transfer, directory structure
-- **Command syntax**:
-  ```bash
-  # Copy local file to server
-  scp -i /path/to/key.pem /local/file.html ubuntu@<SERVER_IP>:/tmp/
-  
-  # Copy to Nginx directory (requires sudo on server)
-  scp -i /path/to/key.pem /local/index.html ubuntu@<SERVER_IP>:/tmp/
-  
-  # On server, move to correct location
-  sudo mv /tmp/index.html /var/www/html/
-  sudo chmod 644 /var/www/html/index.html
-  ```
-- **Status**: Not Started
-- **Key Concepts**:
-  - SCP is SSH-based, uses same credentials
-  - Must set correct permissions (644 for files, 755 for directories)
-  - Path matters: remote path after the `:`
+## 📚 Scripts Overview
+
+### 1. **setup-server.sh**
+Installs and configures the server environment.
+
+**What it does:**
+- Updates system packages
+- Installs Nginx and Certbot
+- Configures UFW firewall
+- Starts and enables Nginx service
+- Validates all installations
+
+**Usage:**
+```bash
+./setup-server.sh
+```
+
+**Features:**
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Colored output for easy reading
+- ✅ Installation validation
+- ✅ Service status verification
 
 ---
 
-### Phase 3: Validation & Testing
+### 2. **update_dns.sh**
+Updates DuckDNS with your server's public IP address.
 
-#### Task 6: Validate Using Server IP Address ✓
-**Concepts**: HTTP, Web Browsers, Network Connectivity
-- **What you'll learn**: How web servers respond to requests
-- **Testing methods**:
-  ```bash
-  # From local machine
-  curl http://<SERVER_IP>
-  
-  # From browser
-  # Visit: http://<SERVER_IP>
-  ```
-- **Status**: Not Started
-- **Troubleshooting**:
-  - Check security group allows port 80
-  - Verify Nginx is running: `sudo systemctl status nginx`
-  - Check file permissions
-  - View Nginx logs: `sudo tail -f /var/log/nginx/access.log`
+**What it does:**
+- Retrieves public IP from multiple services
+- Validates IP address format
+- Updates DuckDNS A record
+- Verifies DNS propagation
+- Confirms update with dig
 
----
+**Usage:**
+```bash
+./update_dns.sh
+```
 
-### Phase 4: DNS Configuration
+**Configuration:**
+- Reads from `.env` file or environment variables
+- Falls back to multiple IP services if one fails
+- Validates DuckDNS API response
 
-#### Task 7: Create A Record in DNS & Point to Elastic IP ✓
-**Concepts**: DNS Records, A Records, Elastic IPs
-- **What you'll learn**: DNS mechanics, static IP allocation
-- **Steps**:
-  1. **Allocate Elastic IP** (AWS) or Static IP (DigitalOcean):
-     ```bash
-     # AWS: Allocate Elastic IP in Console
-     # Associate with your EC2 instance
-     ```
-  2. **Add A Record in DNS**:
-     - Go to domain registrar's DNS settings
-     - Create A record:
-       - **Name**: `@` (or leave blank for root)
-       - **Type**: `A`
-       - **Value**: Your Elastic/Static IP
-       - **TTL**: 3600 (or default)
-     - For `www` subdomain:
-       - **Name**: `www`
-       - **Type**: `A`
-       - **Value**: Same Elastic/Static IP
-- **Status**: Not Started
-- **Key Concepts**:
-  - A records map domain names to IPv4 addresses
-  - TTL (Time To Live) = how long DNS result is cached
-  - Propagation takes 5 minutes to 48 hours
+**Features:**
+- ✅ Secure credential management
+- ✅ IP validation
+- ✅ DNS verification
+- ✅ Multiple fallback services
 
 ---
 
-#### Task 8: Use `dig` to Check DNS Records ✓
-**Concepts**: DNS Queries, Dig Command, DNS Propagation
-- **What you'll learn**: DNS verification, troubleshooting
-- **Commands**:
-  ```bash
-  # Query A record
-  dig example.com
-  
-  # Query specific record type
-  dig example.com A
+### 3. **deploy-site.sh**
+Deploys your website files with backup and rollback capabilities.
+
+**What it does:**
+- Validates source directory
+- Creates compressed backup
+- Deploys files with rsync
+- Sets proper permissions
+- Validates Nginx configuration
+- Reloads Nginx safely
+
+**Usage:**
+```bash
+# Normal deployment
+./deploy-site.sh
+
+# Rollback to previous version
+./deploy-site.sh --rollback
+
+# Show help
+./deploy-site.sh --help
+```
+
+**Features:**
+- ✅ Automatic backups before deployment
+- ✅ Rollback capability
+- ✅ Backup rotation (keeps last 5)
+- ✅ Nginx config validation
+- ✅ Smart rsync (excludes .git, .env, node_modules)
+- ✅ Deployment preview
+
+**Backup Location:** `/var/backups/nginx-sites/`
+
+---
+
+### 4. **full_deploy.sh**
+Complete deployment orchestration for the entire stack.
+
+**What it does:**
+1. Sets up server (Nginx, Certbot, firewall)
+2. Updates DNS records
+3. Deploys website files
+4. Obtains/renews SSL certificate
+5. Verifies everything is working
+
+**Usage:**
+```bash
+# Full deployment
+./full_deploy.sh
+
+# Skip specific steps
+./full_deploy.sh --skip-server-setup
+./full_deploy.sh --skip-dns-update
+./full_deploy.sh --skip-site-deploy
+./full_deploy.sh --skip-ssl-setup
+
+# Dry run (preview without executing)
+./full_deploy.sh --dry-run
+
+# Show help
+./full_deploy.sh --help
+```
+
+**Features:**
+- ✅ Selective step execution
+- ✅ Comprehensive logging
+- ✅ Dry run mode
+- ✅ DNS propagation wait
+- ✅ Certificate management (new/renewal)
+- ✅ SSL verification
+- ✅ Duration tracking
+- ✅ Beautiful deployment summary
+
+**Logs Location:** `./logs/deployment_YYYYMMDD_HHMMSS.log`
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file (see `.env.example`):
+
+```bash
+# DuckDNS Configuration
+DUCKDNS_DOMAIN="your-domain-here"
+DUCKDNS_TOKEN="your-token-here"
+
+# Let's Encrypt Configuration
+LETSENCRYPT_EMAIL="your-email@example.com"
+
+# Website Configuration
+SITE_SOURCE_DIR="$HOME/site"
+WEB_ROOT="/var/www/html"
+```
+
+### Alternative: Environment Variables
+
+You can also set these as environment variables instead of using `.env`:
+
+```bash
+export DUCKDNS_DOMAIN="your-domain"
+export DUCKDNS_TOKEN="your-token"
+export LETSENCRYPT_EMAIL="you@email.com"
+export SITE_SOURCE_DIR="$HOME/site"
+```
+
+---
+
+## 🤖 GitHub Actions (CI/CD)
+
+Automated deployment with GitHub Actions! Push changes and they're automatically deployed.
+
+### Quick Setup
+
+1. **Add secrets to your GitHub repository:**
+   - Go to: Settings → Secrets and variables → Actions
+   - Add: `SSH_PRIVATE_KEY`, `SSH_HOST`, `SSH_USER`
+   - Add: `DUCKDNS_DOMAIN`, `DUCKDNS_TOKEN`, `LETSENCRYPT_EMAIL`
+
+2. **Push to GitHub:**
+   ```bash
+   git add .
+   git commit -m "Enable auto-deploy"
+   git push origin main
+   ```
+
+3. **Done!** Every push to `main` automatically deploys your website.
+
+### Available Workflows
+
+**1. Deploy Website** (Automatic)
+- Triggers on push to `main` branch
+- Deploys only when `site/` files change
+- Fast incremental updates
+
+**2. Full Stack Deployment** (Manual)
+- Run from GitHub Actions tab
+- Complete server setup with SSL
+- Selectively skip steps
+
+### Detailed Setup Guide
+
+See [.github/SETUP.md](.github/SETUP.md) for complete instructions including:
+- SSH key generation
+- GitHub secrets configuration
+- Troubleshooting
+- Security best practices
+
+---
+
+## 📖 Detailed Usage Examples
+
+### Example 1: First-Time Complete Setup
+
+```bash
+# 1. Configure environment
+cp .env.example .env
+nano .env
+
+# 2. Prepare website
+mkdir -p $HOME/site
+cp -r /path/to/your/website/* $HOME/site/
+
+# 3. Run full deployment
+./full_deploy.sh
+```
+
+### Example 2: Update Website Content Only
+
+```bash
+# Update your website files
+cp -r /path/to/updated/files/* $HOME/site/
+
+# Deploy changes
+./deploy-site.sh
+```
+
+### Example 3: Server Already Setup
+
+```bash
+# Skip server setup, only update DNS, deploy, and renew SSL
+./full_deploy.sh --skip-server-setup
+```
+
+### Example 4: Rollback After Bad Deployment
+
+```bash
+# Rollback to previous version
+./deploy-site.sh --rollback
+```
+
+### Example 5: Testing Without Executing
+
+```bash
+# See what would happen without making changes
+./full_deploy.sh --dry-run
+```
+
+---
+
+## 🔍 Verification Commands
+
+### Check Nginx Status
+```bash
+sudo systemctl status nginx
+sudo nginx -t  # Test configuration
+```
+
+### Check SSL Certificate
+```bash
+sudo certbot certificates
+openssl s_client -connect yourdomain.duckdns.org:443
+```
+
+### Check DNS Records
+```bash
+dig yourdomain.duckdns.org
+nslookup yourdomain.duckdns.org
+```
+
+### Test Website
+```bash
+curl http://yourdomain.duckdns.org
+curl https://yourdomain.duckdns.org
+```
+
+### View Logs
+```bash
+# Nginx access logs
+sudo tail -f /var/log/nginx/access.log
+
+# Nginx error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Deployment logs
+tail -f logs/deployment_*.log
+```
+
+---
+
+## 🛡️ Security Features
+
+- **Firewall Configuration** - UFW rules for SSH, HTTP, HTTPS
+- **Automatic HTTPS** - Let's Encrypt SSL certificates
+- **Secure Credentials** - No hardcoded tokens or passwords
+- **File Permissions** - Proper ownership (www-data) and permissions
+- **Input Validation** - IP validation, DNS verification, config validation
+
+---
+
+## 🔄 Backup and Rollback
+
+### Automatic Backups
+- Backups created before every deployment
+- Stored in `/var/backups/nginx-sites/`
+- Automatic rotation (keeps last 5 backups)
+- Compressed with gzip
+
+### Manual Rollback
+```bash
+./deploy-site.sh --rollback
+```
+
+### List Backups
+```bash
+ls -lh /var/backups/nginx-sites/
+```
+
+### Manual Restore
+```bash
+sudo tar -xzf /var/backups/nginx-sites/backup_YYYYMMDD_HHMMSS.tar.gz -C /var/www/html/
+sudo chown -R www-data:www-data /var/www/html/
+sudo systemctl reload nginx
+```
+
+---
+
+## 📊 Monitoring and Maintenance
+
+### Check Deployment Status
+```bash
+# View latest deployment log
+tail -f logs/deployment_$(ls -t logs/ | head -n1)
+```
+
+### Certificate Renewal
+Certbot automatically renews certificates. Test renewal:
+```bash
+sudo certbot renew --dry-run
+```
+
+### Update DNS Manually
+```bash
+./update_dns.sh
+```
+
+### Check Disk Space
+```bash
+df -h /var/www/html
+df -h /var/backups/nginx-sites
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Issue: DNS Not Propagating
+
+**Solution:**
+```bash
+# Check current DNS
+dig yourdomain.duckdns.org
+
+# Force update
+./update_dns.sh
+
+# Wait and check again (can take up to 10 minutes)
+```
+
+### Issue: SSL Certificate Failed
+
+**Solution:**
+```bash
+# Ensure DNS is correct first
+dig yourdomain.duckdns.org
+
+# Try manual certificate
+sudo certbot --nginx -d yourdomain.duckdns.org
+
+# Check logs
+sudo tail -f /var/log/letsencrypt/letsencrypt.log
+```
+
+### Issue: Nginx Won't Start
+
+**Solution:**
+```bash
+# Check configuration
+sudo nginx -t
+
+# Check error logs
+sudo tail -f /var/log/nginx/error.log
+
+# Check if port is in use
+sudo netstat -tulpn | grep :80
+sudo netstat -tulpn | grep :443
+```
+
+### Issue: Permission Denied
+
+**Solution:**
+```bash
+# Fix web root permissions
+sudo chown -R www-data:www-data /var/www/html
+sudo find /var/www/html -type f -exec chmod 644 {} \;
+sudo find /var/www/html -type d -exec chmod 755 {} \;
+```
+
+### Issue: Rollback Failed
+
+**Solution:**
+```bash
+# Check available backups
+ls -lh /var/backups/nginx-sites/
+
+# Manual restore
+sudo tar -xzf /var/backups/nginx-sites/backup_YYYYMMDD_HHMMSS.tar.gz -C /var/www/html/
+```
+
+---
+
+## 📚 Learning Resources
+
+For a comprehensive learning guide covering all concepts, see [LEARNING_GUIDE.md](LEARNING_GUIDE.md).
+
+### Topics Covered:
+- DNS and domain management
+- Linux server administration
+- Nginx web server configuration
+- SSL/TLS certificates
+- DevOps automation
+- Bash scripting best practices
+
+### External Resources:
+- [Nginx Documentation](http://nginx.org/en/docs/)
+- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
+- [DuckDNS Setup](https://www.duckdns.org/spec.jsp)
+- [UFW Firewall Guide](https://help.ubuntu.com/community/UFW)
+
+---
+
+## 🤝 Contributing
+
+Improvements and suggestions are welcome! Some ideas:
+- Support for other DNS providers (Cloudflare, Route53)
+- Docker containerization
+- Nginx configuration templates
+- Monitoring and alerting integration
+- CI/CD integration
+
+---
+
+## 📝 License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## 🎯 Project Structure
+
+```
+.
+├── .github/
+│   ├── workflows/
+│   │   ├── deploy.yml           # Automatic deployment on push
+│   │   └── full-deploy.yml      # Manual full stack deployment
+│   └── SETUP.md                 # GitHub Actions setup guide
+├── site/                        # Your website files (deploy this)
+│   ├── index.html
+│   ├── assets/
+│   └── css/
+├── setup-server.sh              # Server setup and configuration
+├── update_dns.sh                # DNS management (DuckDNS)
+├── deploy-site.sh               # Website deployment with rollback
+├── full_deploy.sh               # Complete orchestration pipeline
+├── .env.example                 # Configuration template
+├── .gitignore                   # Git ignore rules
+├── README.md                    # This file
+├── LEARNING_GUIDE.md            # Comprehensive learning guide
+├── LICENSE                      # License information
+└── logs/                        # Deployment logs (auto-created)
+```
+
+---
+
+## ⚡ Quick Reference
+
+```bash
+# First time setup
+cp .env.example .env && nano .env
+./full_deploy.sh
+
+# Update website
+./deploy-site.sh
+
+# Rollback website
+./deploy-site.sh --rollback
+
+# Update DNS only
+./update_dns.sh
+
+# Full deployment (skip server setup)
+./full_deploy.sh --skip-server-setup
+
+# Preview deployment
+./full_deploy.sh --dry-run
+
+# View logs
+tail -f logs/deployment_*.log
+```
+
+---
+
+**Made with ❤️ for learning DevOps and system administration**
+
+For questions or issues, please check the troubleshooting section or refer to the learning guide.
   
   # Query nameserver
   dig example.com NS

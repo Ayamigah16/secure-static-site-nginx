@@ -1,0 +1,137 @@
+name: Full Stack Deployment
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      skip_server_setup:
+        description: 'Skip server setup'
+        required: false
+        type: boolean
+        default: false
+      skip_dns_update:
+        description: 'Skip DNS update'
+        required: false
+        type: boolean
+        default: false
+      skip_ssl_setup:
+        description: 'Skip SSL setup'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  DEPLOY_PATH: /home/ubuntu/secure-static-site-nginx
+
+jobs:
+  full-deploy:
+    name: Full Stack Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+      
+      - name: Copy repository to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          # Sync entire repository
+          rsync -avz --delete \
+            --exclude '.git' \
+            --exclude 'logs' \
+            --exclude '.env' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./ \
+            $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          
+          echo "✅ Repository synced to server"
+      
+      - name: Create environment file
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DUCKDNS_DOMAIN: ${{ secrets.DUCKDNS_DOMAIN }}
+          DUCKDNS_TOKEN: ${{ secrets.DUCKDNS_TOKEN }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST << ENDSSH
+            cd $DEPLOY_PATH
+            
+            # Create .env file from secrets
+            cat > .env << 'EOF'
+          DUCKDNS_DOMAIN="$DUCKDNS_DOMAIN"
+          DUCKDNS_TOKEN="$DUCKDNS_TOKEN"
+          LETSENCRYPT_EMAIL="$LETSENCRYPT_EMAIL"
+          SITE_SOURCE_DIR="$DEPLOY_PATH/site"
+          EOF
+            
+            chmod 600 .env
+            echo "✅ Environment file created"
+          ENDSSH
+      
+      - name: Build deployment flags
+        id: flags
+        run: |
+          FLAGS=""
+          if [ "${{ inputs.skip_server_setup }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-server-setup"
+          fi
+          if [ "${{ inputs.skip_dns_update }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-dns-update"
+          fi
+          if [ "${{ inputs.skip_ssl_setup }}" = "true" ]; then
+            FLAGS="$FLAGS --skip-ssl-setup"
+          fi
+          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
+      
+      - name: Run full deployment
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          FLAGS: ${{ steps.flags.outputs.flags }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST << 'ENDSSH'
+            set -e
+            cd $DEPLOY_PATH
+            
+            # Make scripts executable
+            chmod +x *.sh
+            
+            # Run full deployment with flags
+            ./full_deploy.sh $FLAGS
+          ENDSSH
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+      
+      - name: Deployment Summary
+        if: success()
+        env:
+          DOMAIN: ${{ secrets.DUCKDNS_DOMAIN }}
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Full Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Server configured"
+          echo "✅ DNS updated"
+          echo "✅ Website deployed"
+          echo "✅ SSL certificate configured"
+          echo ""
+          echo "🌐 Visit: https://$DOMAIN.duckdns.org"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

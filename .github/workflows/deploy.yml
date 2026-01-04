@@ -1,0 +1,133 @@
+name: Deploy Website
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  DEPLOY_PATH: /home/ubuntu/secure-static-site-nginx
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          
+      - name: Test SSH Connection
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST "echo 'SSH connection successful'"
+      
+      - name: Deploy website files
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          # Create deployment directory if it doesn't exist
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST "mkdir -p $DEPLOY_PATH"
+          
+          # Sync website files to server
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./site/ \
+            $SSH_USER@$SSH_HOST:$DEPLOY_PATH/site/
+          
+          echo "✅ Website files synced to server"
+      
+      - name: Run deployment script
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $SSH_USER@$SSH_HOST << 'ENDSSH'
+            set -e
+            cd $DEPLOY_PATH
+            
+            # Make scripts executable
+            chmod +x deploy-site.sh
+            
+            # Run deployment
+            ./deploy-site.sh
+            
+            echo "✅ Deployment completed successfully"
+          ENDSSH
+      
+      - name: Verify deployment
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+        run: |
+          # Wait a moment for Nginx to reload
+          sleep 3
+          
+          # Test HTTP response
+          if [ -n "$DOMAIN" ]; then
+            echo "Testing https://$DOMAIN"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "https://$DOMAIN" || echo "000")
+          else
+            echo "Testing http://$SSH_HOST"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$SSH_HOST" || echo "000")
+          fi
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Website is responding with HTTP 200"
+          else
+            echo "⚠️ Website returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+      
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🚀 Deployment Successful!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ Website files synced"
+          echo "✅ Deployment script executed"
+          echo "✅ Website is live and responding"
+          echo ""
+          if [ -n "${{ secrets.DOMAIN }}" ]; then
+            echo "🌐 Visit: https://${{ secrets.DOMAIN }}"
+          else
+            echo "🌐 Visit: http://${{ secrets.SSH_HOST }}"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "❌ Deployment Failed!"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Please check the logs above for details"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
