@@ -40,7 +40,7 @@ output "elastic_ip" {
 
 output "ami_id" {
   description = "AMI ID used for the instance"
-  value       = data.aws_ami.ubuntu.id
+  value       = local.ami_id
 }
 
 output "private_key_path" {

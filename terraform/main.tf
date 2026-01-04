@@ -21,8 +21,9 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Data source to get latest Ubuntu 24.04 LTS AMI
+# Data source to get latest Ubuntu 24.04 LTS AMI (only if ami_id not provided)
 data "aws_ami" "ubuntu" {
+  count       = var.ami_id == "" ? 1 : 0
   most_recent = true
   owners      = ["099720109477"] # Canonical
 
@@ -35,6 +36,10 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+}
+
+locals {
+  ami_id = var.ami_id != "" ? var.ami_id : data.aws_ami.ubuntu[0].id
 }
 
 # Generate SSH key pair (optional)
@@ -122,7 +127,7 @@ resource "aws_security_group" "web_server" {
 
 # EC2 Instance
 resource "aws_instance" "web_server" {
-  ami                    = data.aws_ami.ubuntu.id
+  ami                    = local.ami_id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.web_server.id]

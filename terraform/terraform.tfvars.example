@@ -9,6 +9,14 @@ environment  = "prod"
 instance_type     = "t3.micro"     # Free tier eligible
 root_volume_size  = 20             # GB
 
+# AMI Configuration (Ubuntu 24.04 LTS)
+# Option 1: Auto-detect (requires ec2:DescribeImages permission)
+ami_id = ""
+
+# Option 2: Hardcode AMI ID (for restricted AWS accounts)
+# Find AMI ID: https://cloud-images.ubuntu.com/locator/ec2/
+# ami_id = "ami-0e2c8caa4b6378d8c"  # us-east-1 Ubuntu 24.04 LTS (example)
+
 # SSH Configuration
 # Option 1: Let Terraform generate SSH keys for you (RECOMMENDED)
 generate_ssh_key    = true

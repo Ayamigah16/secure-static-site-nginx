@@ -77,15 +77,24 @@ case "${1:-help}" in
         check_terraform
         check_aws
         
+        # Create terraform.tfvars if it doesn't exist
         if [[ ! -f "terraform.tfvars" ]]; then
             log_info "Creating terraform.tfvars from example..."
             cp terraform.tfvars.example terraform.tfvars
-            log_success "Created terraform.tfvars - please edit it with your settings"
-            exit 0
+            log_success "Created terraform.tfvars"
+            log_warning "Please edit terraform.tfvars with your settings before running 'apply'"
+            echo ""
         fi
         
+        # Always run terraform init
         terraform init
-        log_success "Terraform initialized"
+        log_success "Terraform initialized successfully"
+        
+        if grep -q "ami_id = \"\"" terraform.tfvars 2>/dev/null; then
+            echo ""
+            log_warning "Note: If you get 'ec2:DescribeImages' permission errors, you'll need to hardcode an AMI ID"
+            echo "Find AMI IDs at: https://cloud-images.ubuntu.com/locator/ec2/"
+        fi
         ;;
     
     plan)

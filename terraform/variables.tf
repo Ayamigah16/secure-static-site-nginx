@@ -75,3 +75,9 @@ variable "deploy_user" {
   type        = string
   default     = "ubuntu"
 }
+
+variable "ami_id" {
+  description = "AMI ID to use (leave empty to auto-detect latest Ubuntu 24.04 LTS). Required if AWS account lacks ec2:DescribeImages permission"
+  type        = string
+  default     = ""
+}
