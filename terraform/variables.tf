@@ -40,6 +40,18 @@ variable "create_key_pair" {
   default     = true
 }
 
+variable "generate_ssh_key" {
+  description = "Whether to generate a new SSH key pair (if true, ignores ssh_public_key_path)"
+  type        = bool
+  default     = false
+}
+
+variable "ssh_key_output_path" {
+  description = "Path to save generated private key (only used if generate_ssh_key is true)"
+  type        = string
+  default     = "./ssh-keys"
+}
+
 variable "existing_key_pair_name" {
   description = "Name of existing AWS key pair (only used if create_key_pair is false)"
   type        = string
