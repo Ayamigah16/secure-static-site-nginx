@@ -108,7 +108,7 @@ configure_firewall() {
         log_info "Enabling UFW and setting up rules..."
         sudo ufw --force allow OpenSSH || error_exit "Failed to allow OpenSSH"
         sudo ufw --force allow 'Nginx Full' || error_exit "Failed to allow Nginx Full"
-        echo "y" | sudo ufw enable || error_exit "Failed to enable UFW"
+        sudo ufw --force enable || error_exit "Failed to enable UFW"
         log_success "UFW firewall configured and enabled"
     else
         log_warning "UFW already active, updating rules..."
